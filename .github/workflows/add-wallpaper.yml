@@ -1,0 +1,52 @@
+---
+name: Fetch Wallpaper
+on:
+  workflow_dispatch:
+    inputs:
+      unsplash_url:
+        description: Image URL
+        required: true
+        type: string
+      category:
+        description: Wallpaper category (folder under wallpapers/)
+        required: true
+        type: choice
+        options:
+          - Abstract
+          - Anime
+          - Anime
+          - Art
+          - Calm
+          - Cartoon
+          - City
+          - Clouds
+          - Cool
+          - Cyberpunk
+          - Fantasy
+          - Mountains
+          - Nature
+          - Sci-fi
+          - Space
+          - Unknown
+permissions:
+  contents: write
+jobs:
+  add-wallpaper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '1'
+      - name: Download wallpaper from Unsplash to category
+        shell: bash
+        run: |
+          cat="${{ github.event.inputs.category }}"
+          mkdir -p "wallpapers/$cat"
+          fname="wallpapers/$cat/$(date +%s).jpg"
+          wget "${{ github.event.inputs.unsplash_url }}" -O "$fname"
+      - name: Commit and push new wallpaper
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Add new wallpaper from Unsplash to ${{ github.event.inputs.category }}
+          file_pattern: wallpapers/*

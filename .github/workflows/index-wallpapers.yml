@@ -1,0 +1,50 @@
+---
+name: Index Wallpapers
+on:
+  push:
+    branches: [main]
+    paths: [wallpapers/**]
+  workflow_dispatch:
+jobs:
+  index-wallpapers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Index wallpapers and update README
+        shell: bash
+        run: |
+          # Set section tags
+          START_TAG="<!-- wallpapers:start -->"
+          END_TAG="<!-- wallpapers:end -->"
+          TMP="wallpapers_section.md"
+          > "$TMP"
+
+          # Find all image files in wallpapers/, recursively
+          find wallpapers -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort | while read -r file; do
+            # Get relative path after wallpapers/
+            relpath="${file#wallpapers/}"
+            echo "### $relpath" >> "$TMP"
+            echo "" >> "$TMP"
+            echo "[image](./wallpapers/$relpath)" >> "$TMP"
+            echo "" >> "$TMP"
+            echo "[Download](./wallpapers/$relpath)" >> "$TMP"
+            echo "" >> "$TMP"
+          done
+
+          # Prepare new README content
+          awk -v start="$START_TAG" -v end="$END_TAG" -v new="$(cat $TMP)" '
+            BEGIN { in_section=0 }
+            {
+              if ($0 ~ start) { print; print new; in_section=1; next }
+              if (in_section && $0 ~ end) { in_section=0 }
+              if (!in_section) { print }
+            }
+          ' README.md > README.new.md
+          mv README.new.md README.md
+          rm "$TMP"
+      - name: Commit changes to README
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Update README with wallpaper links
+          file_pattern: README.md
