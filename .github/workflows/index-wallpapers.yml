@@ -1,57 +1,60 @@
+---
 name: Index Wallpapers
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   index-wallpapers:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Index wallpapers and update README
-      run: |
-        # Find all image files in the root directory
-        echo "<!-- WALLPAPERS_START -->" > wallpapers_section.md
-        echo "" >> wallpapers_section.md
-        
-        # Find and sort image files
-        find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) | sort | while read -r file; do
-          # Remove ./ prefix
-          filename=$(basename "$file")
-          # Create markdown entry with image preview and download link
-          echo "### $filename" >> wallpapers_section.md
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Index wallpapers and update README
+        run: |
+          # Find all image files in the root directory
+          echo "<!-- WALLPAPERS_START -->" > wallpapers_section.md
           echo "" >> wallpapers_section.md
-          echo '![Preview]('"$filename"')' >> wallpapers_section.md
-          echo "" >> wallpapers_section.md
-          echo "[Download]($filename)" >> wallpapers_section.md
-          echo "" >> wallpapers_section.md
-        done
-        
-        echo "<!-- WALLPAPERS_END -->" >> wallpapers_section.md
-        
-        # Update README.md
-        if grep -q "<!-- WALLPAPERS_START -->" README.md; then
-          # Replace existing section
-          sed -i '/<!-- WALLPAPERS_START -->/,/<!-- WALLPAPERS_END -->/d' README.md
-        fi
-        
-        # Add wallpapers section at the end
-        cat wallpapers_section.md >> README.md
-        rm wallpapers_section.md
-        
-    - name: Commit and push changes
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add README.md
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
-          git commit -m "Update wallpapers index"
-          git push
-        fi
+
+          # Find and sort image files
+          find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" \
+            -o -iname "*.png" -o -iname "*.webp" \) | sort | while read -r file; do
+            # Remove ./ prefix
+            filename=$(basename "$file")
+            # Create markdown entry with image preview and download link
+            echo "### $filename" >> wallpapers_section.md
+            echo "" >> wallpapers_section.md
+            echo '![Preview]('"$filename"')' >> wallpapers_section.md
+            echo "" >> wallpapers_section.md
+            echo "[Download]($filename)" >> wallpapers_section.md
+            echo "" >> wallpapers_section.md
+          done
+
+          echo "<!-- WALLPAPERS_END -->" >> wallpapers_section.md
+
+          # Update README.md
+          if grep -q "<!-- WALLPAPERS_START -->" README.md; then
+            # Replace existing section
+            sed -i '/<!-- WALLPAPERS_START -->/,/<!-- WALLPAPERS_END -->/d' \
+              README.md
+          fi
+
+          # Add wallpapers section at the end
+          cat wallpapers_section.md >> README.md
+          rm wallpapers_section.md
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update wallpapers index"
+            git push
+          fi
