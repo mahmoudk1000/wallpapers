@@ -1,38 +1,51 @@
----
 name: Index Wallpapers
 on:
   push:
-    branches: [main]
-    paths: [wallpapers/**]
+    branches:
+      - main
+    paths:
+      - wallpapers/**
   workflow_dispatch:
 jobs:
   index-wallpapers:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Index wallpapers and update README
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: '1'
+      - name: Index
         shell: bash
-        run: |
-          # Set section tags
+        run: >
           START_TAG="<!-- wallpapers:start -->"
+
           END_TAG="<!-- wallpapers:end -->"
+
           TMP="wallpapers_section.md"
+
           > "$TMP"
 
-          # Find all image files in wallpapers/, recursively
-          find wallpapers -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort | while read -r file; do
-            # Get relative path after wallpapers/
-            relpath="${file#wallpapers/}"
-            echo "### $relpath" >> "$TMP"
+          # Find all categories (subfolders) under wallpapers/
+          find wallpapers -mindepth 1 -type d | sort | while read -r
+          category_dir; do
+            category=$(basename "$category_dir")
+            echo "## $category" >> "$TMP"
             echo "" >> "$TMP"
-            echo "[image](./wallpapers/$relpath)" >> "$TMP"
-            echo "" >> "$TMP"
-            echo "[Download](./wallpapers/$relpath)" >> "$TMP"
-            echo "" >> "$TMP"
+
+            # For each image in the category
+            find "$category_dir" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort | while read -r img; do
+              relpath="${img#wallpapers/}"
+              repopath="wallpapers/$relpath"
+              # Link to file in repo (GitHub view)
+              echo "[${relpath}](./${repopath})" >> "$TMP"
+              # Image preview
+              echo "" >> "$TMP"
+              echo "<img src=\"./${repopath}\" alt=\"${relpath}\" width=\"300\" />" >> "$TMP"
+              echo "" >> "$TMP"
+            done
           done
 
-          # Prepare new README content
+          # Insert into README
           awk -v start="$START_TAG" -v end="$END_TAG" -v new="$(cat $TMP)" '
             BEGIN { in_section=0 }
             {
@@ -41,10 +54,12 @@ jobs:
               if (!in_section) { print }
             }
           ' README.md > README.new.md
+          
           mv README.new.md README.md
+
           rm "$TMP"
       - name: Commit changes to README
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: Update README with wallpaper links
+          commit_message: Update README with indexed wallpapers
           file_pattern: README.md
