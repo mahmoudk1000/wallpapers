@@ -14,31 +14,42 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: '1'
-      - name: Index
+      - name: Index wallpapers and update README
         shell: bash
-        run: >
+        run: |
           START_TAG="<!-- wallpapers:start -->"
-
           END_TAG="<!-- wallpapers:end -->"
-
           TMP="wallpapers_section.md"
-
           > "$TMP"
 
-          # Find all categories (subfolders) under wallpapers/
-          find wallpapers -mindepth 1 -type d | sort | while read -r
-          category_dir; do
+          # First: Handle images directly in wallpapers/
+          direct_imgs=$(find wallpapers -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort)
+          if [ -n "$direct_imgs" ]; then
+            echo "## Uncategorized" >> "$TMP"
+            echo "" >> "$TMP"
+            echo "$direct_imgs" | while read -r img; do
+              relpath="${img#wallpapers/}"
+              repopath="wallpapers/$relpath"
+              echo "[${relpath}](./${repopath})" >> "$TMP"
+              echo "" >> "$TMP"
+              echo "<img src=\"./${repopath}\" alt=\"${relpath}\" width=\"300\" />" >> "$TMP"
+              echo "" >> "$TMP"
+            done
+          fi
+
+          # Next: Handle images in subfolders (categories)
+          find wallpapers -mindepth 1 -type d | sort | while read -r category_dir; do
+            # If the folder is empty, skip it
+            imgs=$(find "$category_dir" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort)
+            [ -z "$imgs" ] && continue
+
             category=$(basename "$category_dir")
             echo "## $category" >> "$TMP"
             echo "" >> "$TMP"
-
-            # For each image in the category
-            find "$category_dir" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort | while read -r img; do
+            echo "$imgs" | while read -r img; do
               relpath="${img#wallpapers/}"
               repopath="wallpapers/$relpath"
-              # Link to file in repo (GitHub view)
               echo "[${relpath}](./${repopath})" >> "$TMP"
-              # Image preview
               echo "" >> "$TMP"
               echo "<img src=\"./${repopath}\" alt=\"${relpath}\" width=\"300\" />" >> "$TMP"
               echo "" >> "$TMP"
@@ -54,9 +65,7 @@ jobs:
               if (!in_section) { print }
             }
           ' README.md > README.new.md
-          
           mv README.new.md README.md
-
           rm "$TMP"
       - name: Commit changes to README
         uses: stefanzweifel/git-auto-commit-action@v5
