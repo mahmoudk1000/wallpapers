@@ -1,3 +1,4 @@
+---
 name: Index Wallpapers
 on:
   push:
@@ -11,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: '1'
       - name: Index wallpapers and update README
@@ -21,8 +22,6 @@ jobs:
           END_TAG="<!-- wallpapers:end -->"
           TMP="wallpapers_section.md"
           > "$TMP"
-
-          # First: Handle images directly in wallpapers/
           direct_imgs=$(find wallpapers -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort)
           if [ -n "$direct_imgs" ]; then
             echo "## Uncategorized" >> "$TMP"
@@ -30,33 +29,24 @@ jobs:
             echo "$direct_imgs" | while read -r img; do
               relpath="${img#wallpapers/}"
               repopath="wallpapers/$relpath"
-              echo "[${relpath}](./${repopath})" >> "$TMP"
-              echo "" >> "$TMP"
               echo "<img src=\"./${repopath}\" alt=\"${relpath}\" width=\"300\" />" >> "$TMP"
               echo "" >> "$TMP"
             done
           fi
-
-          # Next: Handle images in subfolders (categories)
           find wallpapers -mindepth 1 -type d | sort | while read -r category_dir; do
-            # If the folder is empty, skip it
             imgs=$(find "$category_dir" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort)
             [ -z "$imgs" ] && continue
-
             category=$(basename "$category_dir")
             echo "## $category" >> "$TMP"
             echo "" >> "$TMP"
             echo "$imgs" | while read -r img; do
               relpath="${img#wallpapers/}"
               repopath="wallpapers/$relpath"
-              echo "[${relpath}](./${repopath})" >> "$TMP"
-              echo "" >> "$TMP"
               echo "<img src=\"./${repopath}\" alt=\"${relpath}\" width=\"300\" />" >> "$TMP"
+              echo "[View](./${repopath})" >> "$TMP"
               echo "" >> "$TMP"
             done
           done
-
-          # Insert into README
           awk -v start="$START_TAG" -v end="$END_TAG" -v new="$(cat $TMP)" '
             BEGIN { in_section=0 }
             {
