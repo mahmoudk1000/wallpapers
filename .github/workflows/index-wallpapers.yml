@@ -1,11 +1,6 @@
 ---
 name: Index Wallpapers
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - wallpapers/**
   workflow_dispatch:
 jobs:
   index-wallpapers:
